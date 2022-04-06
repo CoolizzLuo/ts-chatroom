@@ -5,6 +5,7 @@ import { User } from '@/service/UserService';
 type UserMsg = {
   user: User;
   msg: string;
+  time: number;
 };
 
 let socketId: string = '';
@@ -25,11 +26,15 @@ const chatBoard = document.querySelector('#chatBoard') as HTMLDivElement;
 
 headerRoomName.innerText = roomName || ' - ';
 
-const selfMsgHandler = (msg: string) => {
+const selfMsgHandler = (data: UserMsg) => {
+  const { msg, time } = data;
+  const date = new Date(time);
+  const timeStr = `${date.getHours()}:${date.getMinutes()}`;
+
   const msgItem = document.createElement('div');
   msgItem.classList.add('flex', 'justify-end', 'mb-4', 'items-end');
   msgItem.innerHTML = `
-    <p class="text-xs text-gray-700 mr-4">00:00</p>
+    <p class="text-xs text-gray-700 mr-4">${timeStr}</p>
     <div>
       <p class="text-xs text-white mb-1 text-right">${userName}</p>
       <p class="mx-w-[50%] break-all bg-white px-4 py-2 rounded-bl-full rounded-br-full rounded-tl-full">
@@ -42,18 +47,22 @@ const selfMsgHandler = (msg: string) => {
   chatBoard.scrollTop = chatBoard.scrollHeight;
 };
 
-const otherPersonMsgHandler = (msg: string, name: string) => {
+const otherPersonMsgHandler = (data: UserMsg) => {
+  const { user, msg, time } = data;
+  const date = new Date(time);
+  const timeStr = `${date.getHours()}:${date.getMinutes()}`;
+
   const msgItem = document.createElement('div');
   msgItem.classList.add('flex', 'justify-start', 'mb-4', 'items-end');
   msgItem.innerHTML = `
     <div>
-      <p class="text-xs text-gray-700 mb-1">${name}</p>
+      <p class="text-xs text-gray-700 mb-1">${user.userName}</p>
       <p
         class="mx-w-[50%] break-all bg-gray-800 px-4 py-2 rounded-tr-full rounded-br-full rounded-tl-full text-white">
         ${msg}
       </p>
     </div>
-    <p class="text-xs text-gray-700 ml-4">00:00</p>
+    <p class="text-xs text-gray-700 ml-4">${timeStr}</p>
   `;
   chatBoard.appendChild(msgItem);
   textInput.value = '';
@@ -87,9 +96,9 @@ clientIo.emit('join', { userName, roomName });
 clientIo.on('chat', (data: UserMsg) => {
   const { msg, user } = data;
   if (data.user.id === socketId) {
-    selfMsgHandler(msg);
+    selfMsgHandler(data);
   } else {
-    otherPersonMsgHandler(msg, user.userName);
+    otherPersonMsgHandler(data);
   }
 });
 

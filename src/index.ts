@@ -1,11 +1,10 @@
 import express from 'express';
 import { Server } from 'socket.io';
 import http from 'http';
+import moment from 'moment';
 import devServer from '@/server/dev';
 import prodServer from '@/server/prod';
 import UserService from '@/service/UserService';
-
-import { name } from '@/utils';
 
 const port = 3000;
 const app = express();
@@ -31,11 +30,12 @@ serverIo.on('connection', (socket) => {
   });
 
   socket.on('chat', (msg) => {
+    const time = moment.utc();
     const user = userService.getUser(socket.id);
     if (!user) return;
 
     const { roomName } = user;
-    serverIo.to(roomName).emit('chat', { user, msg });
+    serverIo.to(roomName).emit('chat', { user, msg, time });
   });
 
   socket.on('disconnect', () => {
@@ -53,8 +53,6 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   prodServer(app);
 }
-
-console.log('server side', name);
 
 server.listen(port, () => {
   console.log(`The application is running on port ${port}.`);
