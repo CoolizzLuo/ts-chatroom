@@ -6,7 +6,6 @@ import prodServer from '@/server/prod';
 import UserService from '@/service/UserService';
 
 import { name } from '@/utils';
-import { io } from 'socket.io-client';
 
 const port = 3000;
 const app = express();
@@ -14,12 +13,19 @@ const server = http.createServer(app);
 const serverIo = new Server(server);
 const userService = new UserService();
 
+type userInfo = {
+  userName: string;
+  roomName: string;
+};
+
 serverIo.on('connection', (socket) => {
-  socket.on('join', ({ userName, roomName }: { userName: string; roomName: string }) => {
+  socket.on('join', ({ userName, roomName }: userInfo) => {
     const user = userService.userDataInfoHandler(socket.id, userName, roomName);
     userService.addUser(user);
 
-    serverIo.emit('join', `${userName} 加入了 ${roomName}`);
+    console.log(userName, roomName);
+    socket.join(roomName);
+    socket.broadcast.to(roomName).emit('join', `${userName} 加入了 ${roomName}`);
   });
 
   socket.on('chat', (msg) => {
@@ -28,10 +34,11 @@ serverIo.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const user = userService.getUser(socket.id);
-    const userName = user?.userName || '有人';
-    serverIo.emit('leave', `${userName} 離開聊天室`);
+    if (!user) return;
 
+    const { userName, roomName } = user;
     userService.removeUser(socket.id);
+    socket.broadcast.to(roomName).emit('leave', `${userName} 離開聊天室`);
   });
 });
 
