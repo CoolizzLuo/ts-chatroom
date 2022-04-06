@@ -10,6 +10,8 @@ if (!userName || !roomName) {
 }
 const clientIo = io('http://localhost:3000');
 
+clientIo.emit('join', { userName, roomName });
+
 const headerRoomName = document.querySelector('#headerRoomName') as HTMLParagraphElement;
 const backBtn = document.querySelector('#backBtn') as HTMLButtonElement;
 const textInput = document.querySelector('#textInput') as HTMLInputElement;
@@ -35,6 +37,16 @@ const msgHandler = (msg: string) => {
   chatBoard.scrollTop = chatBoard.scrollHeight;
 };
 
+const roomMsgHandler = (msg: string) => {
+  const msgItem = document.createElement('div');
+  msgItem.classList.add('flex', 'justify-center', 'mb-4', 'items-center');
+  msgItem.innerHTML = `
+  <p class="text-gray-700 text-sm">${msg}</p>
+  `;
+  chatBoard.appendChild(msgItem);
+  chatBoard.scrollTop = chatBoard.scrollHeight;
+};
+
 backBtn.addEventListener('click', () => {
   window.location.href = '/main/main.html';
 });
@@ -47,10 +59,14 @@ submitBtn.addEventListener('click', (e) => {
   }
 });
 
-clientIo.on('join', (msg) => {
-  console.log(msg);
-});
-
 clientIo.on('chat', (msg) => {
   msgHandler(msg);
+});
+
+clientIo.on('join', (msg) => {
+  roomMsgHandler(msg);
+});
+
+clientIo.on('leave', (msg) => {
+  roomMsgHandler(msg);
 });
