@@ -1,6 +1,13 @@
 import './index.css';
 import { io } from 'socket.io-client';
+import { User } from '@/service/UserService';
 
+type UserMsg = {
+  user: User;
+  msg: string;
+};
+
+let socketId: string = '';
 const url = new URL(window.location.href);
 const userName = url.searchParams.get('user_name');
 const roomName = url.searchParams.get('room_name');
@@ -10,8 +17,6 @@ if (!userName || !roomName) {
 }
 const clientIo = io('http://localhost:3000');
 
-clientIo.emit('join', { userName, roomName });
-
 const headerRoomName = document.querySelector('#headerRoomName') as HTMLParagraphElement;
 const backBtn = document.querySelector('#backBtn') as HTMLButtonElement;
 const textInput = document.querySelector('#textInput') as HTMLInputElement;
@@ -20,7 +25,7 @@ const chatBoard = document.querySelector('#chatBoard') as HTMLDivElement;
 
 headerRoomName.innerText = roomName || ' - ';
 
-const msgHandler = (msg: string) => {
+const selfMsgHandler = (msg: string) => {
   const msgItem = document.createElement('div');
   msgItem.classList.add('flex', 'justify-end', 'mb-4', 'items-end');
   msgItem.innerHTML = `
@@ -31,6 +36,24 @@ const msgHandler = (msg: string) => {
         ${msg}
       </p>
     </div>
+  `;
+  chatBoard.appendChild(msgItem);
+  textInput.value = '';
+  chatBoard.scrollTop = chatBoard.scrollHeight;
+};
+
+const otherPersonMsgHandler = (msg: string, name: string) => {
+  const msgItem = document.createElement('div');
+  msgItem.classList.add('flex', 'justify-start', 'mb-4', 'items-end');
+  msgItem.innerHTML = `
+    <div>
+      <p class="text-xs text-gray-700 mb-1">${name}</p>
+      <p
+        class="mx-w-[50%] break-all bg-gray-800 px-4 py-2 rounded-tr-full rounded-br-full rounded-tl-full text-white">
+        ${msg}
+      </p>
+    </div>
+    <p class="text-xs text-gray-700 ml-4">00:00</p>
   `;
   chatBoard.appendChild(msgItem);
   textInput.value = '';
@@ -54,13 +77,20 @@ backBtn.addEventListener('click', () => {
 submitBtn.addEventListener('click', (e) => {
   const text = textInput.value;
 
-  if (text) {
-    clientIo.emit('chat', text);
-  }
+  if (text) clientIo.emit('chat', text);
 });
 
-clientIo.on('chat', (msg) => {
-  msgHandler(msg);
+clientIo.on('connected', (id) => (socketId = id));
+
+clientIo.emit('join', { userName, roomName });
+
+clientIo.on('chat', (data: UserMsg) => {
+  const { msg, user } = data;
+  if (data.user.id === socketId) {
+    selfMsgHandler(msg);
+  } else {
+    otherPersonMsgHandler(msg, user.userName);
+  }
 });
 
 clientIo.on('join', (msg) => {

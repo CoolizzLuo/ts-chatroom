@@ -19,6 +19,8 @@ type userInfo = {
 };
 
 serverIo.on('connection', (socket) => {
+  socket.emit('connected', socket.id);
+
   socket.on('join', ({ userName, roomName }: userInfo) => {
     const user = userService.userDataInfoHandler(socket.id, userName, roomName);
     userService.addUser(user);
@@ -29,7 +31,11 @@ serverIo.on('connection', (socket) => {
   });
 
   socket.on('chat', (msg) => {
-    serverIo.emit('chat', msg);
+    const user = userService.getUser(socket.id);
+    if (!user) return;
+
+    const { roomName } = user;
+    serverIo.to(roomName).emit('chat', { user, msg });
   });
 
   socket.on('disconnect', () => {

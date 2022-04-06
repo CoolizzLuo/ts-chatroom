@@ -38,3 +38,4 @@ class UserService {
 }
 
 export default UserService;
+export { User };
